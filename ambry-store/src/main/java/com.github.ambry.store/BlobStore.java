@@ -120,6 +120,7 @@ public class BlobStore implements Store {
     // allows concurrent gets
     final Timer.Context context = metrics.getResponse.time();
     try {
+      Map<String, Long> offsetMap = getBlobOffset();
       List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>(ids.size());
       Map<StoreKey, MessageInfo> indexMessages = new HashMap<StoreKey, MessageInfo>(ids.size());
       for (StoreKey key : ids) {
@@ -333,5 +334,32 @@ public class BlobStore implements Store {
     if (!started) {
       throw new StoreException("Store not started", StoreErrorCodes.Store_Not_Started);
     }
+  }
+
+  /**
+   * perform index scan for offset of all blobs stored in the partition
+   * @return Map{String:BlobID, Long:Offset} contains all Blob Ids and their offsets in a store
+   */
+  public Map<String, Long> getBlobOffset(){
+    //better to key offset sorted
+    Map<String, Long> offsetMap = new HashMap<String,Long>();
+    for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
+      for (Map.Entry<StoreKey, IndexValue> subEntry : entry.getValue().index.entrySet()){
+          offsetMap.put(subEntry.getKey().getID(), subEntry.getValue().getOriginalMessageOffset());
+          //For debugging
+          String id = subEntry.getKey().getID();
+          long size = subEntry.getValue().getSize();
+          long offset = subEntry.getValue().getOffset();
+          long originalOffset = subEntry.getValue().getOriginalMessageOffset();
+          System.out.println("ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
+                  String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
+      }
+    }
+    return offsetMap;
+  }
+
+
+  public void compactBlobStore(){
+
   }
 }
