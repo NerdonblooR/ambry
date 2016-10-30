@@ -16,9 +16,8 @@ package com.github.ambry.store;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.github.ambry.config.StoreConfig;
-import com.github.ambry.utils.FileLock;
-import com.github.ambry.utils.Scheduler;
-import com.github.ambry.utils.Time;
+import com.github.ambry.utils.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -343,8 +343,8 @@ public class BlobStore implements Store {
   public Map<String, Long> getBlobOffset(){
     //better to key offset sorted
     Map<String, Long> offsetMap = new HashMap<String,Long>();
-    for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
-      for (Map.Entry<StoreKey, IndexValue> subEntry : entry.getValue().index.entrySet()){
+    for(IndexSegment entry : index.indexes.values()){
+      for (Map.Entry<StoreKey, IndexValue> subEntry : entry.index.entrySet()){
           offsetMap.put(subEntry.getKey().getID(), subEntry.getValue().getOriginalMessageOffset());
           //For debugging
           String id = subEntry.getKey().getID();
@@ -358,8 +358,60 @@ public class BlobStore implements Store {
     return offsetMap;
   }
 
+  private static final String Compacted_Log_File_Name = "log_compacted";
+  public void compactLog(){
+    //Lock Blob
+    synchronized (lock) {
+      //Create a new Log
+      try {
+        //Copy messages over
+        EnumSet<StoreGetOptions> storeGetOptions = EnumSet.allOf(StoreGetOptions.class);
+        List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
+        for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
+          for (StoreKey key: entry.getValue().index.keySet()){
+            BlobReadOptions readInfo = index.getBlobReadInfo(key, storeGetOptions);
+            readOptions.add(readInfo);
+          }
+        }
+        MessageReadSet readSet = log.getView(readOptions);
 
-  public void compactBlobStore(){
+        ArrayList<IndexEntry> indexEntries = new ArrayList<IndexEntry>();
+        Log compactedLog = new Log(dataDir, capacityInBytes, metrics, Compacted_Log_File_Name);
+        long writeStartOffset = 0;
+        for (int i=0; i<readSet.count(); i++) {
+          MessageInfo info = readOptions.get(i).getMessageInfo();
+          IndexValue value = new IndexValue(info.getSize(), writeStartOffset, (byte) 0, info.getExpirationTimeInMs());
+          IndexEntry entry = new IndexEntry(info.getStoreKey(), value);
+          indexEntries.add(entry);
+
+          writeStartOffset = readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
+        }
+
+        FileSpan fileSpan = new FileSpan(indexEntries.get(0).getValue().getOffset(), compactedLog.getLogEndOffset());
+        index.addToIndex(indexEntries, fileSpan, false);
+
+        compactedLog.close();
+        shutdown();
+
+        File logFile = log.getFile();
+        File compactedLogFile = compactedLog.getFile();
+        String logPath = logFile.getAbsolutePath();
+
+
+        String tempFileName = "tmp";
+        File tempFile = new File(dataDir, tempFileName);
+        logFile.renameTo(tempFile);
+        compactedLogFile.renameTo(new File(logPath));
+        logFile.delete();
+
+        start();
+
+
+      } catch (Exception e) {
+
+      }
+
+    }
 
   }
 }

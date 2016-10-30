@@ -42,9 +42,21 @@ public class Log implements Read, Write {
   private Logger logger = LoggerFactory.getLogger(getClass());
   private final StoreMetrics metrics;
 
+  public FileChannel getFileChannel(){
+    return this.fileChannel;
+  }
+  public File getFile(){
+    return this.file;
+  }
+
   public Log(String dataDir, long capacityInBytes, StoreMetrics metrics)
       throws IOException {
-    file = new File(dataDir, Log_File_Name);
+      this(dataDir, capacityInBytes, metrics, Log_File_Name);
+  }
+
+  public Log(String dataDir, long capacityInBytes, StoreMetrics metrics, String filename)
+          throws IOException {
+    file = new File(dataDir, filename);
     if (!file.exists()) {
       // if the file does not exist, preallocate it
       Utils.preAllocateFileIfNeeded(file, capacityInBytes);

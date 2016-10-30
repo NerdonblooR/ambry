@@ -311,9 +311,17 @@ public class PersistentIndex {
    * @param fileSpan The file span that this entry represents in the log
    * @throws StoreException
    */
+
   public void addToIndex(IndexEntry entry, FileSpan fileSpan)
+          throws StoreException {
+    this.addToIndex(entry, fileSpan, true);
+  }
+
+  public void addToIndex(IndexEntry entry, FileSpan fileSpan, boolean shouldValidateFileSpan)
       throws StoreException {
-    validateFileSpan(fileSpan);
+    if (shouldValidateFileSpan){
+      validateFileSpan(fileSpan);
+    }
     if (needToRollOverIndex(entry)) {
       IndexSegment info = new IndexSegment(dataDir, entry.getValue().getOffset(), factory, entry.getKey().sizeInBytes(),
           IndexValue.Index_Value_Size_In_Bytes, config, metrics);
@@ -332,8 +340,15 @@ public class PersistentIndex {
    * @throws StoreException
    */
   public void addToIndex(ArrayList<IndexEntry> entries, FileSpan fileSpan)
+          throws StoreException {
+    this.addToIndex(entries, fileSpan, true);
+  }
+
+  public void addToIndex(ArrayList<IndexEntry> entries, FileSpan fileSpan, boolean shouldValidateFileSpan)
       throws StoreException {
-    validateFileSpan(fileSpan);
+    if (shouldValidateFileSpan) {
+      validateFileSpan(fileSpan);
+    }
     for (IndexEntry entry : entries) {
       long entryStartOffset = entry.getValue().getOffset();
       long entryEndOffset = entryStartOffset + entry.getValue().getSize();
