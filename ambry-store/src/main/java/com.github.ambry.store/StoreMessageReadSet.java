@@ -33,6 +33,7 @@ class BlobReadOptions implements Comparable<BlobReadOptions> {
   private final Long size;
   private final Long ttl;
   private final StoreKey storeKey;
+  private final boolean isDeleted;
   private Logger logger = LoggerFactory.getLogger(getClass());
 
   private static final short version = 0;
@@ -42,10 +43,15 @@ class BlobReadOptions implements Comparable<BlobReadOptions> {
   private static final short TTL_Length = 8;
 
   BlobReadOptions(long offset, long size, long ttl, StoreKey storeKey) {
+    this(offset, size, ttl, storeKey, false);
+  }
+
+  BlobReadOptions(long offset, long size, long ttl, StoreKey storeKey, boolean isDeleted) {
     this.offset = offset;
     this.size = size;
     this.ttl = ttl;
     this.storeKey = storeKey;
+    this.isDeleted = isDeleted;
     logger.trace("BlobReadOption offset {} size {} ttl {} storeKey {}", offset, size, ttl, storeKey);
   }
 
@@ -66,7 +72,7 @@ class BlobReadOptions implements Comparable<BlobReadOptions> {
   }
 
   public MessageInfo getMessageInfo() {
-    return new MessageInfo(storeKey, size, ttl);
+    return new MessageInfo(storeKey, size, isDeleted, ttl);
   }
 
   public boolean validateFileEndOffset(long fileEndOffset) {

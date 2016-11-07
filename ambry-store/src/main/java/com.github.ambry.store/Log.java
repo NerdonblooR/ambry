@@ -35,8 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Log implements Read, Write {
 
   private AtomicLong currentWriteOffset;
-  private final FileChannel fileChannel;
-  private final File file;
+  private FileChannel fileChannel;
+  private File file;
   private final long capacityInBytes;
   private static final String Log_File_Name = "log_current";
   private Logger logger = LoggerFactory.getLogger(getClass());
@@ -155,6 +155,11 @@ public class Log implements Read, Write {
   void close()
       throws IOException {
     fileChannel.close();
+  }
+
+  void refresh()
+          throws IOException {
+    fileChannel = Utils.openChannel(file, true);
   }
 
   public void flush()

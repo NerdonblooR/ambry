@@ -352,7 +352,7 @@ public class PersistentIndex {
     for (IndexEntry entry : entries) {
       long entryStartOffset = entry.getValue().getOffset();
       long entryEndOffset = entryStartOffset + entry.getValue().getSize();
-      addToIndex(entry, new FileSpan(entryStartOffset, entryEndOffset));
+      addToIndex(entry, new FileSpan(entryStartOffset, entryEndOffset), shouldValidateFileSpan);
     }
   }
 
@@ -494,29 +494,36 @@ public class PersistentIndex {
    * @throws StoreException
    */
   public BlobReadOptions getBlobReadInfo(StoreKey id, EnumSet<StoreGetOptions> getOptions)
+          throws StoreException {
+    return this.getBlobReadInfo(id, getOptions, true);
+  }
+
+  public BlobReadOptions getBlobReadInfo(StoreKey id, EnumSet<StoreGetOptions> getOptions, boolean getOriginalBlob)
       throws StoreException {
     IndexValue value = findKey(id);
     if (value == null) {
       throw new StoreException("Id " + id + " not present in index " + dataDir, StoreErrorCodes.ID_Not_Found);
-    } else if (value.isFlagSet(IndexValue.Flags.Delete_Index)) {
-      if (getOptions.contains(StoreGetOptions.Store_Include_Deleted)) {
-        // The delete entry in the index does not contain the information about the size of the original blob. So we
-        // use the Message format to read and provide the information. The range in log that we provide starts at the
-        // original message offset and ends at the delete message's start offset (the original message surely cannot go
-        // beyond the start offset of the delete message.
-        try {
-          MessageInfo deletedBlobInfo = hardDelete.getMessageInfo(log, value.getOriginalMessageOffset(), factory);
-          return new BlobReadOptions(value.getOriginalMessageOffset(), deletedBlobInfo.getSize(),
-              deletedBlobInfo.getExpirationTimeInMs(), deletedBlobInfo.getStoreKey());
-        } catch (IOException e) {
-          throw new StoreException("IOError when reading delete blob info from the log " + dataDir, e,
-              StoreErrorCodes.IOError);
+    } else if (getOriginalBlob) {
+      if (value.isFlagSet(IndexValue.Flags.Delete_Index)) {
+        if (getOptions.contains(StoreGetOptions.Store_Include_Deleted)) {
+          // The delete entry in the index does not contain the information about the size of the original blob. So we
+          // use the Message format to read and provide the information. The range in log that we provide starts at the
+          // original message offset and ends at the delete message's start offset (the original message surely cannot go
+          // beyond the start offset of the delete message.
+          try {
+            MessageInfo deletedBlobInfo = hardDelete.getMessageInfo(log, value.getOriginalMessageOffset(), factory);
+            return new BlobReadOptions(value.getOriginalMessageOffset(), deletedBlobInfo.getSize(),
+                    deletedBlobInfo.getExpirationTimeInMs(), deletedBlobInfo.getStoreKey());
+          } catch (IOException e) {
+            throw new StoreException("IOError when reading delete blob info from the log " + dataDir, e,
+                    StoreErrorCodes.IOError);
+          }
+        } else {
+          throw new StoreException("Id " + id + " has been deleted in index " + dataDir, StoreErrorCodes.ID_Deleted);
         }
-      } else {
-        throw new StoreException("Id " + id + " has been deleted in index " + dataDir, StoreErrorCodes.ID_Deleted);
+      } else if (isExpired(value) && !getOptions.contains(StoreGetOptions.Store_Include_Expired)) {
+        throw new StoreException("Id " + id + " has expired ttl in index " + dataDir, StoreErrorCodes.TTL_Expired);
       }
-    } else if (isExpired(value) && !getOptions.contains(StoreGetOptions.Store_Include_Expired)) {
-      throw new StoreException("Id " + id + " has expired ttl in index " + dataDir, StoreErrorCodes.TTL_Expired);
     }
     return new BlobReadOptions(value.getOffset(), value.getSize(), value.getTimeToLiveInMs(), id);
   }

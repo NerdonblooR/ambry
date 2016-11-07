@@ -120,7 +120,6 @@ public class BlobStore implements Store {
     // allows concurrent gets
     final Timer.Context context = metrics.getResponse.time();
     try {
-      Map<String, Long> offsetMap = getBlobOffset();
       List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>(ids.size());
       Map<StoreKey, MessageInfo> indexMessages = new HashMap<StoreKey, MessageInfo>(ids.size());
       for (StoreKey key : ids) {
@@ -203,6 +202,7 @@ public class BlobStore implements Store {
           StoreErrorCodes.Unknown_Error);
     } finally {
       context.stop();
+      getBlobOffset();
     }
   }
 
@@ -258,6 +258,7 @@ public class BlobStore implements Store {
           StoreErrorCodes.Unknown_Error);
     } finally {
       context.stop();
+      compactLog();
     }
   }
 
@@ -369,7 +370,7 @@ public class BlobStore implements Store {
         List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
         for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
           for (StoreKey key: entry.getValue().index.keySet()){
-            BlobReadOptions readInfo = index.getBlobReadInfo(key, storeGetOptions);
+            BlobReadOptions readInfo = index.getBlobReadInfo(key, storeGetOptions, false);
             readOptions.add(readInfo);
           }
         }
@@ -381,17 +382,26 @@ public class BlobStore implements Store {
         for (int i=0; i<readSet.count(); i++) {
           MessageInfo info = readOptions.get(i).getMessageInfo();
           IndexValue value = new IndexValue(info.getSize(), writeStartOffset, (byte) 0, info.getExpirationTimeInMs());
+          if (info.isDeleted()) {
+            value.setFlag(IndexValue.Flags.Delete_Index);
+          }
           IndexEntry entry = new IndexEntry(info.getStoreKey(), value);
           indexEntries.add(entry);
 
-          writeStartOffset = readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
+          String id = entry.getKey().getID();
+          long size = entry.getValue().getSize();
+          long offset = entry.getValue().getOffset();
+          long originalOffset = entry.getValue().getOriginalMessageOffset();
+          System.out.println("WRITING OFFSET " + String.valueOf(writeStartOffset) + " ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
+                  String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
+
+          writeStartOffset += readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
         }
 
         FileSpan fileSpan = new FileSpan(indexEntries.get(0).getValue().getOffset(), compactedLog.getLogEndOffset());
         index.addToIndex(indexEntries, fileSpan, false);
 
         compactedLog.close();
-        shutdown();
 
         File logFile = log.getFile();
         File compactedLogFile = compactedLog.getFile();
@@ -402,9 +412,9 @@ public class BlobStore implements Store {
         File tempFile = new File(dataDir, tempFileName);
         logFile.renameTo(tempFile);
         compactedLogFile.renameTo(new File(logPath));
-        logFile.delete();
-
-        start();
+        tempFile.delete();
+        log.refresh();
+        log.setLogEndOffset(writeStartOffset);
 
 
       } catch (Exception e) {
