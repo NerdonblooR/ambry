@@ -503,8 +503,10 @@ public class PersistentIndex {
     IndexValue value = findKey(id);
     if (value == null) {
       throw new StoreException("Id " + id + " not present in index " + dataDir, StoreErrorCodes.ID_Not_Found);
-    } else if (getOriginalBlob) {
-      if (value.isFlagSet(IndexValue.Flags.Delete_Index)) {
+    }
+    boolean isDeleted = value.isFlagSet(IndexValue.Flags.Delete_Index);
+    if (getOriginalBlob) {
+      if (isDeleted) {
         if (getOptions.contains(StoreGetOptions.Store_Include_Deleted)) {
           // The delete entry in the index does not contain the information about the size of the original blob. So we
           // use the Message format to read and provide the information. The range in log that we provide starts at the
@@ -525,7 +527,8 @@ public class PersistentIndex {
         throw new StoreException("Id " + id + " has expired ttl in index " + dataDir, StoreErrorCodes.TTL_Expired);
       }
     }
-    return new BlobReadOptions(value.getOffset(), value.getSize(), value.getTimeToLiveInMs(), id);
+
+    return new BlobReadOptions(value.getOffset(), value.getSize(), value.getTimeToLiveInMs(), id, isDeleted);
   }
 
   private boolean isExpired(IndexValue value) {

@@ -379,7 +379,7 @@ public class BlobStore implements Store {
         ArrayList<IndexEntry> indexEntries = new ArrayList<IndexEntry>();
         Log compactedLog = new Log(dataDir, capacityInBytes, metrics, Compacted_Log_File_Name);
         long writeStartOffset = 0;
-        for (int i=0; i<readSet.count(); i++) {
+        for (int i=0; i< readSet.count(); i++) {
           MessageInfo info = readOptions.get(i).getMessageInfo();
           IndexValue value = new IndexValue(info.getSize(), writeStartOffset, (byte) 0, info.getExpirationTimeInMs());
           if (info.isDeleted()) {
