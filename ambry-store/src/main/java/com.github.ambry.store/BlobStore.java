@@ -18,6 +18,7 @@ import com.codahale.metrics.Timer;
 import com.github.ambry.config.StoreConfig;
 import com.github.ambry.utils.*;
 
+import java.awt.event.ComponentAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ public class BlobStore implements Store {
   private MessageStoreHardDelete hardDelete;
   private StoreMetrics metrics;
   private Time time;
+  private BlobCompactor compactor;
 
   public BlobStore(String storeId, StoreConfig config, Scheduler scheduler, MetricRegistry registry, String dataDir,
       long capacityInBytes, StoreKeyFactory factory, MessageStoreRecovery recovery, MessageStoreHardDelete hardDelete,
@@ -103,6 +105,7 @@ public class BlobStore implements Store {
         // set the log end offset to the recovered offset from the index after initializing it
         log.setLogEndOffset(index.getCurrentEndOffset());
         metrics.initializeCapacityUsedMetric(log, capacityInBytes);
+        compactor = new BlobCompactor();
         started = true;
       } catch (Exception e) {
         throw new StoreException("Error while starting store for dir " + dataDir, e,
@@ -258,7 +261,7 @@ public class BlobStore implements Store {
           StoreErrorCodes.Unknown_Error);
     } finally {
       context.stop();
-      compactLog();
+      compactor.compactLog();
     }
   }
 
@@ -359,69 +362,81 @@ public class BlobStore implements Store {
     return offsetMap;
   }
 
-  private static final String Compacted_Log_File_Name = "log_compacted";
-  public void compactLog(){
-    //Lock Blob
-    synchronized (lock) {
-      //Create a new Log
-      try {
-        //Copy messages over
-        EnumSet<StoreGetOptions> storeGetOptions = EnumSet.allOf(StoreGetOptions.class);
-        List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
-        for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
-          for (StoreKey key: entry.getValue().index.keySet()){
-            BlobReadOptions readInfo = index.getBlobReadInfo(key, storeGetOptions, false);
-            readOptions.add(readInfo);
+
+
+
+  class BlobCompactor implements Runnable{
+    private static final String Compacted_Log_File_Name = "log_compacted";
+    public void compactLog(){
+      //Lock Blob
+      synchronized (lock) {
+        //Create a new Log
+        try {
+          //Copy messages over
+          EnumSet<StoreGetOptions> storeGetOptions = EnumSet.allOf(StoreGetOptions.class);
+          List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
+          for(Map.Entry<Long,IndexSegment> entry : index.indexes.entrySet()){
+            for (StoreKey key: entry.getValue().index.keySet()){
+              BlobReadOptions readInfo = index.getBlobReadInfo(key, storeGetOptions, false);
+              readOptions.add(readInfo);
+            }
           }
-        }
-        MessageReadSet readSet = log.getView(readOptions);
+          MessageReadSet readSet = log.getView(readOptions);
 
-        ArrayList<IndexEntry> indexEntries = new ArrayList<IndexEntry>();
-        Log compactedLog = new Log(dataDir, capacityInBytes, metrics, Compacted_Log_File_Name);
-        long writeStartOffset = 0;
-        for (int i=0; i< readSet.count(); i++) {
-          MessageInfo info = readOptions.get(i).getMessageInfo();
-          IndexValue value = new IndexValue(info.getSize(), writeStartOffset, (byte) 0, info.getExpirationTimeInMs());
-          if (info.isDeleted()) {
-            value.setFlag(IndexValue.Flags.Delete_Index);
+          ArrayList<IndexEntry> indexEntries = new ArrayList<IndexEntry>();
+          Log compactedLog = new Log(dataDir, capacityInBytes, metrics, Compacted_Log_File_Name);
+          long writeStartOffset = 0;
+          for (int i=0; i< readSet.count(); i++) {
+            MessageInfo info = readOptions.get(i).getMessageInfo();
+            IndexValue value = new IndexValue(info.getSize(), writeStartOffset, (byte) 0, info.getExpirationTimeInMs());
+            if (info.isDeleted()) {
+              value.setFlag(IndexValue.Flags.Delete_Index);
+            }
+            IndexEntry entry = new IndexEntry(info.getStoreKey(), value);
+            indexEntries.add(entry);
+
+            String id = entry.getKey().getID();
+            long size = entry.getValue().getSize();
+            long offset = entry.getValue().getOffset();
+            long originalOffset = entry.getValue().getOriginalMessageOffset();
+            System.out.println("WRITING OFFSET " + String.valueOf(writeStartOffset) + " ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
+                    String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
+
+            writeStartOffset += readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
           }
-          IndexEntry entry = new IndexEntry(info.getStoreKey(), value);
-          indexEntries.add(entry);
 
-          String id = entry.getKey().getID();
-          long size = entry.getValue().getSize();
-          long offset = entry.getValue().getOffset();
-          long originalOffset = entry.getValue().getOriginalMessageOffset();
-          System.out.println("WRITING OFFSET " + String.valueOf(writeStartOffset) + " ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
-                  String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
+          FileSpan fileSpan = new FileSpan(indexEntries.get(0).getValue().getOffset(), compactedLog.getLogEndOffset());
+          index.addToIndex(indexEntries, fileSpan, false);
 
-          writeStartOffset += readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
+          compactedLog.close();
+
+          File logFile = log.getFile();
+          File compactedLogFile = compactedLog.getFile();
+          String logPath = logFile.getAbsolutePath();
+
+
+          String tempFileName = "tmp";
+          File tempFile = new File(dataDir, tempFileName);
+          logFile.renameTo(tempFile);
+          compactedLogFile.renameTo(new File(logPath));
+          tempFile.delete();
+          log.refresh();
+          log.setLogEndOffset(writeStartOffset);
+
+
+        } catch (Exception e) {
+
+          System.out.println("Caught exception for compaction: " + e.getStackTrace());
+
         }
-
-        FileSpan fileSpan = new FileSpan(indexEntries.get(0).getValue().getOffset(), compactedLog.getLogEndOffset());
-        index.addToIndex(indexEntries, fileSpan, false);
-
-        compactedLog.close();
-
-        File logFile = log.getFile();
-        File compactedLogFile = compactedLog.getFile();
-        String logPath = logFile.getAbsolutePath();
-
-
-        String tempFileName = "tmp";
-        File tempFile = new File(dataDir, tempFileName);
-        logFile.renameTo(tempFile);
-        compactedLogFile.renameTo(new File(logPath));
-        tempFile.delete();
-        log.refresh();
-        log.setLogEndOffset(writeStartOffset);
-
-
-      } catch (Exception e) {
 
       }
 
     }
 
+    @Override
+    public void run() {
+
+    }
   }
 }

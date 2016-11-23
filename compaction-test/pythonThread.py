@@ -110,7 +110,10 @@ class MasterThread(threading.Thread):
                 job.append(random.choice(self.blobMap[partitionId]))
             else:
                 # choose a random blob to delete
-                job.append(random.choice(random.choice(blobMap)))
+                partition = random.choice(blobMap)
+                blob = random.choice(partition)
+                partition.remove(blob)
+                job.append(blob)
 
             self.input_q.put(job)
 
