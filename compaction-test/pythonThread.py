@@ -3,6 +3,8 @@ import Queue
 import os
 import random
 import time
+import base64
+import struct
 
 # 10GB filename
 BIG_FILE = "bigFile"
@@ -28,6 +30,15 @@ WARM_HIT_RATE = 0.2
 # Partition type rate
 HOT_RATE = 0.1
 WARM_RATE = 0.2
+
+
+
+
+def addPadding(s):
+    """
+    add padding to a base64 encoding
+    """
+    return s + ((len(s) / 3 + 1)*3 - len(s)) * "="
 
 
 class WorkerThread(threading.Thread):
@@ -64,19 +75,31 @@ class WorkerThread(threading.Thread):
 
     def _getBlob(self, blobId):
         print "Worker: " + str(self.tid) + " do get\n"
-        pass
+        cmdLine = "curl http://localhost:1174/{0}".format(blobId)
+        os.system(cmdLine)
 
     def _putBlob(self, fileName):
         print "Worker: " + str(self.tid) + " do put\n"
-        cmdLine = ""
+        cmdLine = "curl -i -H \"x-ambry-blob-size : " \
+                  "`wc -c {0} | xargs | cut -d\" \" -f1`\" " \
+                  "-H \"x-ambry-service-id : CUrlUpload\"  -H \"" \
+                  "x-ambry-owner-id : `whoami`\" -H \"x-ambry-content-type : image/jpg\" " \
+                  "-H \"x-ambry-um-description : Demonstration Image\" " \
+                  "http://localhost:1174/ --data-binary @{0}".format(fileName)
+
         retLine = os.popen(cmdLine).read()
-        # parse the line
+        blobId = retLine.split("\n")[1][11:-1]
+        partitionId = struct.unpack(">q", base64.b64decode(addPadding(blobId))[4:12])[0]
+
         response = list()  # [partitionId, blobID]
+        response.append(partitionId)
+        response.append(blobId)
         return response
 
     def _delete(self, blobId):
         print "Worker: " + str(self.tid) + " do delete\n"
-        pass
+        cmdLine = "curl -i -X DELETE http://localhost:1174/{0}".format(blobId)
+        os.system(cmdLine)
 
 
 class MasterThread(threading.Thread):
@@ -112,9 +135,9 @@ class MasterThread(threading.Thread):
                 # choose a random blob to delete
                 partition = random.choice(blobMap)
                 blob = random.choice(partition)
+                # remove the blob id from the partition
                 partition.remove(blob)
                 job.append(blob)
-
             self.input_q.put(job)
 
             try:
@@ -164,6 +187,9 @@ class MasterThread(threading.Thread):
         else:
             return TINY_FILE
 
+    """
+    randomly populate hot, warm and cold partition pool
+    """
     def _populatePartitionPool(self):
         self.hotPartition = list()
         self.warmPartition = list()
