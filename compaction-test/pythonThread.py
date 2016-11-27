@@ -3,6 +3,8 @@ import Queue
 import os
 import random
 import time
+import base64
+import struct
 
 # 10GB filename
 BIG_FILE = "bigFile"
@@ -20,7 +22,7 @@ SMALL_RATE = 0.4
 SHUFFLE_TIME = 30
 # Operation rate
 READ_RATE = 0.8
-WRITE_RATE = 0.15
+WRITE_RATE = 0.18
 DELETE_RATE = 1 - READ_RATE - WRITE_RATE
 # Partition pool hit rate
 HOT_HIT_RATE = 0.7
@@ -28,6 +30,15 @@ WARM_HIT_RATE = 0.2
 # Partition type rate
 HOT_RATE = 0.1
 WARM_RATE = 0.2
+
+
+
+
+def addPadding(s):
+    """
+    add padding to a base64 encoding
+    """
+    return s + ((len(s) / 3 + 1)*3 - len(s)) * "="
 
 
 class WorkerThread(threading.Thread):
@@ -64,24 +75,36 @@ class WorkerThread(threading.Thread):
 
     def _getBlob(self, blobId):
         print "Worker: " + str(self.tid) + " do get\n"
-        pass
+        cmdLine = "curl http://localhost:1174/{0}".format(blobId)
+        os.system(cmdLine)
 
     def _putBlob(self, fileName):
         print "Worker: " + str(self.tid) + " do put\n"
-        cmdLine = ""
+        cmdLine = "curl -i -H \"x-ambry-blob-size : " \
+                  "`wc -c {0} | xargs | cut -d\" \" -f1`\" " \
+                  "-H \"x-ambry-service-id : CUrlUpload\"  -H \"" \
+                  "x-ambry-owner-id : `whoami`\" -H \"x-ambry-content-type : image/jpg\" " \
+                  "-H \"x-ambry-um-description : Demonstration Image\" " \
+                  "http://localhost:1174/ --data-binary @{0}".format(fileName)
+
         retLine = os.popen(cmdLine).read()
-        # parse the line
+        print retLine
+        blobId = retLine.split("\n")[1][11:-1]
+        partitionId = struct.unpack(">q", base64.b64decode(addPadding(blobId))[4:12])[0]
+
         response = list()  # [partitionId, blobID]
+        response.append(partitionId)
+        response.append(blobId)
         return response
 
     def _delete(self, blobId):
         print "Worker: " + str(self.tid) + " do delete\n"
-        pass
+        cmdLine = "curl -i -X DELETE http://localhost:1174/{0}".format(blobId)
+        os.system(cmdLine)
 
 
 class MasterThread(threading.Thread):
-    """docstring for MasterThread"""
-
+    """Master that assigns job to wokers"""
     def __init__(self, input_q, result_q, blobMap):
         super(MasterThread, self).__init__()
         self.input_q = input_q
@@ -89,7 +112,7 @@ class MasterThread(threading.Thread):
         self.stopRequest = threading.Event()
 
         # blobMap[i] = list blobs stored in partition i
-        self.blobMap = blobMap
+        self.blobMap = list(blobMap)
         self.partitionNum = len(blobMap)
         self._populatePartitionPool()
 
@@ -100,30 +123,30 @@ class MasterThread(threading.Thread):
             if currTime - prevTime >= SHUFFLE_TIME:
                 self._populatePartitionPool()
                 prevTime = currTime
-            # generate job ticket
+            # generate job ticket if input_q is not
             job = list()
             job.append(self._pickJob())
             if job[0] == "put":
-                job.append(self._pickFile)
+                job.append(self._pickFile())
             elif job[0] == "get":
                 partitionId = self._pickPartition()
                 job.append(random.choice(self.blobMap[partitionId]))
-            else:
+            elif job[0] == "delete" and min(map(len, self.blobMap)) > 0:
                 # choose a random blob to delete
-                partition = random.choice(blobMap)
+                partition = random.choice(self.blobMap)
                 blob = random.choice(partition)
+                # remove the blob id from the partition
                 partition.remove(blob)
                 job.append(blob)
-
             self.input_q.put(job)
 
             try:
                 # Worker will append response to result queue after retrieving response from put operation
                 # response [partitionId, blobId]
-                response = self.result_q.get(False)
+                response = self.result_q.get(True, 0.05)
                 partitionId = response[0]
                 blobId = response[1]
-                blobMap[partitionId].append(blobId)
+                self.blobMap[partitionId].append(blobId)
             # get response from result_q
             except Queue.Empty:
                 continue
@@ -158,12 +181,15 @@ class MasterThread(threading.Thread):
         if r <= BIG_RATE:
             return BIG_FILE
         elif BIG_RATE < r <= BIG_RATE + MID_RATE:
-            return MID_RATE
+            return MID_FILE
         elif BIG_RATE + MID_RATE < r <= BIG_RATE + MID_RATE + SMALL_RATE:
-            return SMALL_RATE
+            return SMALL_FILE
         else:
             return TINY_FILE
 
+    """
+    randomly populate hot, warm and cold partition pool
+    """
     def _populatePartitionPool(self):
         self.hotPartition = list()
         self.warmPartition = list()
@@ -183,24 +209,30 @@ class MasterThread(threading.Thread):
 
         self.coldPartition += partitionIdList
 
+        #nasty workaround for testing script
+        if hotNum == 0:
+            self.hotPartition.append(0)
+        if warmNum == 0:
+            self.warmPartition.append(0)
+
+
 
 if __name__ == '__main__':
-    testDuration = 0
+    testDuration = 1000
     # populate ambry with random files
-    partitionNum = 10
-    bigFileNum = 100
-    midFileNum = 100
-    smallFileNum = 100
-    tinyFileNum = 100
+    partitionNum = 1
+    bigFileNum = 5
+    midFileNum = 5
+    smallFileNum = 5
+    tinyFileNum = 5
 
     fileNumList = [bigFileNum, midFileNum, smallFileNum, tinyFileNum]
     fileNameList = [BIG_FILE, MID_FILE, SMALL_FILE, TINY_FILE]
 
-    workerNum = 3
+    workerNum = 2
     blobMap = [[] for i in range(partitionNum)]
 
-    # pending job size is limit to 5000
-    input_q = Queue.Queue(5000)
+    input_q = Queue.Queue()
     result_q = Queue.Queue()
     # Create the "thread pool"
     pool = [WorkerThread(tid=i, input_q=input_q, result_q=result_q) for i in range(workerNum)]
@@ -212,19 +244,20 @@ if __name__ == '__main__':
 
     # Load blobs into ambry
     for i in range(len(fileNameList)):
-        for j in range(fileNameList[i]):
+        for j in range(fileNumList[i]):
             input_q.put(["put", fileNameList[i]])
 
     print("Finish Loading\n")
 
     # Retrive response from result_queue to build blobMap
-    while not result_q.empty():
-        response = result_q.get(False)
+    while not input_q.empty():
+        response = result_q.get()
         partitionId = response[0]
         blobId = response[1]
         blobMap[partitionId].append(blobId)
 
     print("Finish Building BlobMap\n")
+    print blobMap
 
     # Create a master
     master = MasterThread(input_q, result_q, blobMap)
@@ -238,6 +271,8 @@ if __name__ == '__main__':
             master.join()
             for worker in pool:
                 worker.join()
+
+    print("Finish Test\n")
 
 
 
