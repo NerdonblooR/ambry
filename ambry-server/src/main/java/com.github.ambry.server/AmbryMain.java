@@ -23,7 +23,11 @@ import com.github.ambry.utils.Utils;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import com.github.ambry.metrics.JmxServer;
+import com.codahale.metrics.CsvReporter;
+import java.util.concurrent.TimeUnit;
+import java.io.File;
+import java.util.Locale;
 
 /**
  * Start point for creating an instance of {@link AmbryServer} and starting/shutting it down.
@@ -33,6 +37,8 @@ public class AmbryMain {
 
   public static void main(String[] args) {
     final AmbryServer ambryServer;
+    final JmxServer jmxServer;
+    final CsvReporter csvReporter;
     int exitCode = 0;
     try {
       final InvocationOptions options = new InvocationOptions(args);
@@ -43,6 +49,16 @@ public class AmbryMain {
               new ClusterMapConfig(verifiableProperties));
       logger.info("Bootstrapping AmbryServer");
       ambryServer = new AmbryServer(verifiableProperties, clusterMap, SystemTime.getInstance());
+
+      jmxServer = new JmxServer(0);
+      csvReporter = CsvReporter.forRegistry(clusterMap.getMetricRegistry())
+              .formatFor(Locale.US)
+              .convertRatesTo(TimeUnit.SECONDS)
+              .convertDurationsTo(TimeUnit.MILLISECONDS)
+              .build(new File("/tmp/metrics/"));
+
+      csvReporter.start(5, TimeUnit.SECONDS);
+
       // attach shutdown handler to catch control-c
       Runtime.getRuntime().addShutdownHook(new Thread() {
         public void run() {
