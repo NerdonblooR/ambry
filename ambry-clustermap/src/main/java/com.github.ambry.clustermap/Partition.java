@@ -35,7 +35,7 @@ import java.util.Set;
  */
 public class Partition extends PartitionId {
 
-  private static final long Min_Replica_Capacity_In_Bytes = 1 * 1024 * 1024 * 1024L;
+  private static final long Min_Replica_Capacity_In_Bytes = 1 * 1024 * 1024;
   private static final long Max_Replica_Capacity_In_Bytes = 10995116277760L; // 10 TB
   private static final short Version_Field_Size_In_Bytes = 2;
   private static final int Partition_Size_In_Bytes = Version_Field_Size_In_Bytes + 8;
