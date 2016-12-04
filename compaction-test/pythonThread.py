@@ -31,6 +31,7 @@ WARM_HIT_RATE = 0.2
 HOT_RATE = 0.1
 WARM_RATE = 0.2
 
+
 def reportPerPartition(hotPartitions, warmPartitions, coldPartitions):
     metricPath = "/tmp/metrics"
     testResultPath = "/tmp/testResult"
@@ -179,7 +180,7 @@ class MasterThread(threading.Thread):
 
     def join(self, timeout=None):
         self.stopRequest.set()
-        super(WorkerThread, self).join(timeout)
+        super(MasterThread, self).join(timeout)
 
     def _assignJob(self):
         # assign job
@@ -273,10 +274,10 @@ class MasterThread(threading.Thread):
 
 
 if __name__ == '__main__':
-    testDuration = 1000
+    testDuration = 10
     # populate ambry with random files
     partitionNum = 2
-    bigFileNum = 100
+    bigFileNum = 10
     midFileNum = 0
     smallFileNum = 0
     tinyFileNum = 0
@@ -326,7 +327,6 @@ if __name__ == '__main__':
             master.join()
             for worker in pool:
                 worker.join()
-
     print("Finish Test\n")
 
 
