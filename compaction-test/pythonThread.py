@@ -56,7 +56,7 @@ def reportPerPartition(hotPartitions, warmPartitions, coldPartitions):
                 fields = f.readline().split(',')
                 for c_idx in colToPreserve[f_idx]:
                     outfields.append(fileName.split(".")[-2] + "." + fields[c_idx])
-
+ 
                 for line in f:
                     lineList = line.split(",")
                     timeStamp = int(lineList[0])
@@ -252,29 +252,12 @@ class MasterThread(threading.Thread):
     """
 
     def _populatePartitionPool(self):
-        self.hotPartition = list()
-        self.warmPartition = list()
-        self.coldPartition = list()
         partitionIdList = [i for i in range(self.partitionNum)]
-        hotNum = int(HOT_RATE * self.partitionNum)
-        warmNum = int(WARM_RATE * self.partitionNum)
-        for i in range(hotNum):
-            picked = random.choice(partitionIdList)
-            self.hotPartition.append(picked)
-            partitionIdList.remove(picked)
-
-        for j in range(warmNum):
-            picked = random.choice(partitionIdList)
-            self.warmPartition.append(picked)
-            partitionIdList.remove(picked)
-
-        self.coldPartition += partitionIdList
-
-        # nasty workaround for testing script
-        if hotNum == 0:
-            self.hotPartition.append(0)
-        if warmNum == 0:
-            self.warmPartition.append(0)
+        hotNum = max(1, int(HOT_RATE * self.partitionNum))
+        warmNum = max(1, int(WARM_RATE * self.partitionNum))
+        self.hotPartition = range(0, hotNum)
+        self.warmPartition = range(hotNum, min(hotNum+warNum, partitionNum))
+        self.coldPartition = range(min(hotNum+warNum, partitionNum), partitionNum)
 
 
 if __name__ == '__main__':
