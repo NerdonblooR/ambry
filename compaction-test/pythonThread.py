@@ -79,7 +79,7 @@ def addPadding(s):
     """
     add padding to a base64 encoding
     """
-    return s + ((len(s) / 3 + 1)*3 - len(s)) * "="
+    return s + ((len(s) / 3 + 1) * 3 - len(s)) * "="
 
 
 class WorkerThread(threading.Thread):
@@ -144,6 +144,7 @@ class WorkerThread(threading.Thread):
 
 class MasterThread(threading.Thread):
     """Master that assigns job to wokers"""
+
     def __init__(self, input_q, result_q, blobMap):
         super(MasterThread, self).__init__()
         self.input_q = input_q
@@ -194,7 +195,9 @@ class MasterThread(threading.Thread):
             if len(self.blobMap[partitionId]) == 0:
                 return
             job.append(random.choice(self.blobMap[partitionId]))
-        elif job[0] == "delete" and min(map(len, self.blobMap)) > 0:
+        else:
+            if min(map(len, self.blobMap)) == 0:
+                return
             # choose a random blob to delete
             partition = random.choice(self.blobMap)
             blob = random.choice(partition)
@@ -206,6 +209,7 @@ class MasterThread(threading.Thread):
     """
     pick a partition for getting blobs
     """
+
     def _pickPartition(self):
         r = random.random()
         hot = filter(lambda x: len(self.blobMap[x]) > 0, self.hotPartition)
@@ -246,6 +250,7 @@ class MasterThread(threading.Thread):
     """
     randomly populate hot, warm and cold partition pool
     """
+
     def _populatePartitionPool(self):
         self.hotPartition = list()
         self.warmPartition = list()
@@ -265,12 +270,11 @@ class MasterThread(threading.Thread):
 
         self.coldPartition += partitionIdList
 
-        #nasty workaround for testing script
+        # nasty workaround for testing script
         if hotNum == 0:
             self.hotPartition.append(0)
         if warmNum == 0:
             self.warmPartition.append(0)
-
 
 
 if __name__ == '__main__':
@@ -327,6 +331,7 @@ if __name__ == '__main__':
             master.join()
             for worker in pool:
                 worker.join()
+            break;
     print("Finish Test\n")
 
 
