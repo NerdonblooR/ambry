@@ -89,6 +89,13 @@ public class StoreConfig {
   @Default("false")
   public final boolean storeEnableHardDelete;
 
+  /**
+   * The number of scheduler threads the server will use to perform background tasks (store, replication)
+   */
+  @Config("store.compaction.threshold")
+  @Default("0.2")
+  public final double storeCompactionThreshold;
+
   public StoreConfig(VerifiableProperties verifiableProperties) {
 
     storeKeyFactory = verifiableProperties.getString("store.key.factory", "com.github.ambry.commons.BlobIdFactory");
@@ -103,6 +110,7 @@ public class StoreConfig {
     storeDeletedMessageRetentionDays = verifiableProperties.getInt("store.deleted.message.retention.days", 7);
     storeHardDeleteBytesPerSec = verifiableProperties.getInt("store.hard.delete.bytes.per.sec", 1 * 1024 * 1024);
     storeEnableHardDelete = verifiableProperties.getBoolean("store.enable.hard.delete", false);
+    storeCompactionThreshold = verifiableProperties.getDouble("store.compaction.threshold", 0.2);
   }
 }
 
