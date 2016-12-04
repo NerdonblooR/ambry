@@ -72,7 +72,7 @@ public class BlobStore implements Store {
         this.recovery = recovery;
         this.hardDelete = hardDelete;
         this.time = time;
-        this.compactThreshold = config.storeCompactionThreshold * capacityInBytes;
+        this.compactThreshold = (long)(config.storeCompactionThreshold * capacityInBytes);
     }
 
     @Override
