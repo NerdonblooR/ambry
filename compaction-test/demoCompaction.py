@@ -7,7 +7,7 @@ import base64
 import struct
 
 # 1GB filename
-BIG_FILE = "bigFile"
+BIG_FILE = "DEMOPIC.JPG"
 # 100mb filename
 MID_FILE = "midFile"
 # 10MB filename
@@ -41,7 +41,7 @@ def reportPerPartition(hotPartitions, warmPartitions, coldPartitions):
     partitionTypes = ["hot", "warm", "cold"]
     partitionGroups = [hotPartitions, warmPartitions, coldPartitions]
     metricFiles = [getResponseFile, putResponseFile]
-    colToPreserve = [[1, 2, 3,12], [1, 2, 3,12]]
+    colToPreserve = [[1, 2, 3], [1, 2, 3]]
 
     for i in range(len(partitionTypes)):
         for partiotnID in partitionGroups[i]:
@@ -56,7 +56,7 @@ def reportPerPartition(hotPartitions, warmPartitions, coldPartitions):
                 fields = f.readline().split(',')
                 for c_idx in colToPreserve[f_idx]:
                     outfields.append(fileName.split(".")[-2] + "." + fields[c_idx])
- 
+
                 for line in f:
                     lineList = line.split(",")
                     timeStamp = int(lineList[0])
@@ -119,7 +119,7 @@ class WorkerThread(threading.Thread):
         os.system(cmdLine)
 
     def _putBlob(self, fileName):
-        print "Worker: " + str(self.tid) + " do put\n"
+        print "\nWorker: " + str(self.tid) + " do put\n"
         cmdLine = "curl -i -H \"x-ambry-blob-size : " \
                   "`wc -c {0} | xargs | cut -d\" \" -f1`\" " \
                   "-H \"x-ambry-service-id : CUrlUpload\"  -H \"" \
@@ -256,15 +256,15 @@ class MasterThread(threading.Thread):
         hotNum = max(1, int(HOT_RATE * self.partitionNum))
         warmNum = max(1, int(WARM_RATE * self.partitionNum))
         self.hotPartition = range(0, hotNum)
-        self.warmPartition = range(hotNum, min(hotNum+warNum, partitionNum))
-        self.coldPartition = range(min(hotNum+warNum, partitionNum), partitionNum)
+        self.warmPartition = range(hotNum, min(hotNum + warNum, partitionNum))
+        self.coldPartition = range(min(hotNum + warNum, partitionNum), partitionNum)
 
 
 if __name__ == '__main__':
     testDuration = 10
     # populate ambry with random files
     partitionNum = 2
-    bigFileNum = 10
+    bigFileNum = 15
     midFileNum = 0
     smallFileNum = 0
     tinyFileNum = 0
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     fileNumList = [bigFileNum, midFileNum, smallFileNum, tinyFileNum]
     fileNameList = [BIG_FILE, MID_FILE, SMALL_FILE, TINY_FILE]
 
-    workerNum = 5
+    workerNum = 1
     blobMap = [[] for i in range(partitionNum)]
 
     input_q = Queue.Queue()
@@ -286,38 +286,33 @@ if __name__ == '__main__':
     print("Start Loading\n")
 
     # Load blobs into ambry
-    for i in range(len(fileNameList)):
-        for j in range(fileNumList[i]):
-            input_q.put(["put", fileNameList[i]])
+    for i in range(10):
+        input_q.put(["put", BIG_FILE])
+
+    blobIdList = []
+    # Retrive response from result_queue to build blobMap
+    while len(blobIdList) < 10:
+        response = result_q.get()
+        blobId = response[1]
+        blobIdList.append(blobId)
 
     print("Finish Loading\n")
+    print os.popen("ls -alh /tmp/0").read()
 
-    # Retrive response from result_queue to build blobMap
-    while not input_q.empty():
-        response = result_q.get()
-        partitionId = response[0]
-        blobId = response[1]
-        blobMap[partitionId].append(blobId)
+    print("Deleting until compaction will be triggered...\n")
 
-    print("Finish Building BlobMap\n")
-    print blobMap
+    for i in range(6):
+        blobId = blobIdList[i]
+        cmdLine = "curl -i -X DELETE http://localhost:1174/{0}".format(blobId)
+        os.system(cmdLine)
+        print "Blob[{0}] get deleted\n".format(blobId)
 
-    # Create a master
-    master = MasterThread(input_q, result_q, blobMap)
-    master.start()
+    print "Delete one from following list to trigger compaction: \n"
+    print blobIdList[6:]
 
-    # Looping till test time exhausted
-    jobStartTime = time.time()
-    while True:
-        curTime = time.time()
-        if testDuration != 0 and curTime - jobStartTime > testDuration:
-            master.join()
-            for worker in pool:
-                worker.join()
-            break;
+    print os.popen("ls -alh /tmp/0").read()
 
-    reportPerPartition(master.hotPartition, master.warmPartition, master.coldPartitions)
-    print("Finish Test\n")
+
 
 
 
