@@ -1,0 +1,28 @@
+{
+  "clusterName": "LocalSetUp_OneNodeTwoDisks_TwoPartitions",
+  "version": 1,
+  "datacenters": [
+    {
+      "dataNodes": [
+        {
+          "disks": [
+            {
+              "capacityInBytes": 21474836480,
+              "hardwareState": "AVAILABLE",
+              "mountPath": "/localdisk0/"
+            },
+            {
+              "capacityInBytes": 21474836480,
+              "hardwareState": "AVAILABLE",
+              "mountPath": "/localdisk1/"
+            }
+          ],
+          "hardwareState": "AVAILABLE",
+          "hostname": "localhost",
+          "port": 6670
+        },
+      ],
+      "name": "Datacenter"
+    }
+  ]
+}

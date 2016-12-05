@@ -1,0 +1,30 @@
+{
+  "clusterName": "LocalSetUp_OneNodeTwoDisks_TwoPartitions",
+  "version": 1,
+  "partitions": [
+    {
+      "id": 0,
+      "partitionState": "READ_WRITE",
+      "replicaCapacityInBytes": 10737418240,
+      "replicas": [
+        {
+          "hostname": "localhost",
+          "mountPath": "/localdisk0/h26tan/0",
+          "port": 6670
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "partitionState": "READ_WRITE",
+      "replicaCapacityInBytes": 10737418240,
+      "replicas": [
+        {
+          "hostname": "localhost",
+          "mountPath": "/localdisk1/h26tan/1",
+          "port": 6670
+        }
+      ]
+    }
+  ]
+}
