@@ -211,7 +211,7 @@ public class BlobStore implements Store {
                     StoreErrorCodes.Unknown_Error);
         } finally {
             context.stop();
-            getBlobOffset();
+            //getBlobOffset();
         }
     }
 
@@ -402,6 +402,7 @@ public class BlobStore implements Store {
             synchronized (lock) {
                 //Create a new Log
                 try {
+                    logger.trace("Store : BEGIN COMPACTION");
                     //Copy messages over
                     EnumSet<StoreGetOptions> storeGetOptions = EnumSet.allOf(StoreGetOptions.class);
                     List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
@@ -452,6 +453,7 @@ public class BlobStore implements Store {
                     tempFile.delete();
                     log.refresh();
                     log.setLogEndOffset(writeStartOffset);
+                    logger.trace("Store : END COMPACTION");
 
 
                 } catch (Exception e) {

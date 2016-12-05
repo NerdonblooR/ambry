@@ -55,7 +55,7 @@ public class AmbryMain {
               .formatFor(Locale.US)
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
-              .build(new File("~/metrics/"));
+              .build(new File("/tmp/metrics/"));
 
       csvReporter.start(5, TimeUnit.SECONDS);
 
