@@ -20,7 +20,7 @@
           "hardwareState": "AVAILABLE",
           "hostname": "localhost",
           "port": 6670
-        },
+        }
       ],
       "name": "Datacenter"
     }
