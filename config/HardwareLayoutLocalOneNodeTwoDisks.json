@@ -9,12 +9,12 @@
             {
               "capacityInBytes": 21474836480,
               "hardwareState": "AVAILABLE",
-              "mountPath": "/localdisk0/"
+              "mountPath": "/localdisk0/h26tan"
             },
             {
               "capacityInBytes": 21474836480,
               "hardwareState": "AVAILABLE",
-              "mountPath": "/localdisk1/"
+              "mountPath": "/localdisk1/h26tan"
             }
           ],
           "hardwareState": "AVAILABLE",
