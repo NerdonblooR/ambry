@@ -57,7 +57,13 @@ public class BlobStore implements Store {
     private BlobCompactor compactor;
     //metric for scheduling compaction
     private AtomicLong deletedBytes;
+    // threshold of deleted blob size in bytes to trigger compaction
+    //compaction only triggered when current deleted size larger than this threshold
     private long compactThreshold;
+    // threshold of get rates within last minute,
+    // compaction only triggered when current rate smaller than this threshold
+    private double hotnessThreshold = 5;
+    private final boolean enableHotnessAwareCompaction = true;
 
 
     public BlobStore(String storeId, StoreConfig config, Scheduler scheduler, MetricRegistry registry, String dataDir,
@@ -72,7 +78,7 @@ public class BlobStore implements Store {
         this.recovery = recovery;
         this.hardDelete = hardDelete;
         this.time = time;
-        this.compactThreshold = (long)(config.storeCompactionThreshold * capacityInBytes);
+        this.compactThreshold = (long) (config.storeCompactionThreshold * capacityInBytes);
     }
 
     @Override
@@ -263,7 +269,7 @@ public class BlobStore implements Store {
                 }
                 logger.trace("Store : {} delete has been marked in the index ", dataDir);
 
-                if (dBytes > compactThreshold) {
+                if (shouldTriggerCompaction(dBytes)) {
                     scheduler.scheduleHelper("Do compaction", compactor, 0, 0, null, true);
                 } else {
                     deletedBytes.set(dBytes);
@@ -382,6 +388,10 @@ public class BlobStore implements Store {
         return offsetMap;
     }
 
+
+    /**
+     * get the total size of deleted blobs in the partition
+     */
     private AtomicLong getDeletedSizeInByte() {
         long logEndOffset = log.getLogEndOffset();
         long totalSize = 0;
@@ -391,6 +401,12 @@ public class BlobStore implements Store {
             }
         }
         return new AtomicLong(logEndOffset - totalSize);
+    }
+
+
+    private boolean shouldTriggerCompaction(long deletedBytes) {
+        double rate = metrics.getResponse.getOneMinuteRate();
+        return (!enableHotnessAwareCompaction || (rate < hotnessThreshold)) && (deletedBytes > compactThreshold);
     }
 
 

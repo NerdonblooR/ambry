@@ -56,7 +56,6 @@ public class AmbryMain {
               .convertRatesTo(TimeUnit.SECONDS)
               .convertDurationsTo(TimeUnit.MILLISECONDS)
               .build(new File("/tmp/metrics/"));
-
       csvReporter.start(5, TimeUnit.SECONDS);
 
       // attach shutdown handler to catch control-c

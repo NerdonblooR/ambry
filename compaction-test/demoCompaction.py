@@ -82,6 +82,24 @@ def addPadding(s):
     return s + ((len(s) / 3 + 1) * 3 - len(s)) * "="
 
 
+def putBlob(fileName):
+        cmdLine = "curl -i -H \"x-ambry-blob-size : " \
+                  "`wc -c {0} | xargs | cut -d\" \" -f1`\" " \
+                  "-H \"x-ambry-service-id : CUrlUpload\"  -H \"" \
+                  "x-ambry-owner-id : `whoami`\" -H \"x-ambry-content-type : image/jpg\" " \
+                  "-H \"x-ambry-um-description : Demonstration Image\" " \
+                  "http://localhost:1174/ --data-binary @{0}".format(fileName)
+
+        retLine = os.popen(cmdLine).read()
+        blobId = retLine.split("\n")[1][11:-1]
+        partitionId = struct.unpack(">q", base64.b64decode(addPadding(blobId))[4:12])[0]
+
+        response = list()  # [partitionId, blobID]
+        response.append(partitionId)
+        response.append(blobId)
+        return response
+
+
 class WorkerThread(threading.Thread):
     """docstring for ClassName"""
 
@@ -307,10 +325,12 @@ if __name__ == '__main__':
         os.system(cmdLine)
         print "Blob[{0}] get deleted\n".format(blobId)
 
-    print "Delete one from following list to trigger compaction: \n"
-    print blobIdList[6:]
-
-    print os.popen("ls -alh /tmp/0").read()
+    print "Delete one from following list to trigger compaction:"
+    for bid in blobIdList[6:]:
+        print "{0}\n".format(bid)
+    print "\n"
+    print "Current partition size:"
+    print os.popen("ls -alh /tmp/0").read().split("\n")[-2]
 
 
 

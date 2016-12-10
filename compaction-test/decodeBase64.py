@@ -2,6 +2,8 @@ __author__ = 'haotan'
 
 import base64
 import struct
+import json
+from pprint import pprint
 import os
 
 
@@ -97,7 +99,26 @@ if __name__ == '__main__':
     print addPadding(blobID)
     partiotnID = base64.b64decode(addPadding(blobID))[4:12]
     print struct.unpack(">q", partiotnID)[0]
-    reportPerPartition([0], [1], [])
+    #reportPerPartition([0], [1], [])
+
+    with open('../config/PartitionLayoutLocalTwoPartitionsTwoDisks.json') as data_file:
+        data = json.load(data_file)
+        for p in data["partitions"]:
+            p["replicaCapacityInBytes"] = 1073741824
+
+    pprint(data)
+
+    with open('../config/PartitionLayoutLocalTwoPartitionsTwoDisks.json','w') as data_file:
+        json.dump(data, data_file)
+
+
+    for p in data["partitions"]:
+        for r in  p["replicas"]:
+            cmd_line = "rm  {0}/{1}/*".format(r["mountPath"], p["id"])
+            print "Cleaning storage directory: {0}\n".format(cmd_line)
+
+
+    print len(data["partitions"])
 
 
     #os.system("touch test.py")
