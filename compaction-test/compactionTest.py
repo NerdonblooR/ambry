@@ -40,13 +40,15 @@ def cleanUpPartitions(mountPath, pID):
     os.system(cmd_line)
 
 
-def start_up_ambry(hardwareLayout, partitionLayout):
+
+
+def start_up_ambry(hardwareLayout, partitionLayout, serverProperties, testResultPath):
     print "Starting up ambry server"
     server_cmd = "nohup java -Dlog4j.configuration=file:../config/log4j.properties -jar ../target/ambry.jar " \
-                 "--serverPropsFilePath ../config/server.properties " \
+                 "--serverPropsFilePath {2} " \
                  "--hardwareLayoutFilePath {0} " \
                  "--partitionLayoutFilePath {1} > " \
-                 "../logs/server.log & echo $! >> save_pid.txt".format(hardwareLayout, partitionLayout)
+                 "../logs/server.log & echo $! >> save_pid.txt".format(hardwareLayout, partitionLayout,serverProperties)
 
     frontend_cmd = "nohup java -Dlog4j.configuration=file:../config/log4j.properties " \
                    "-cp \"../target/*\" com.github.ambry.frontend.AmbryFrontendMain " \
@@ -55,11 +57,14 @@ def start_up_ambry(hardwareLayout, partitionLayout):
                    "--partitionLayoutFilePath {1} > " \
                    "../logs/frontend.log & echo $! >> save_pid.txt".format(hardwareLayout, partitionLayout)
 
+    cpy_cmd = "cp {0} {1} {2} {3}".format(hardwareLayout, partitionLayout, serverProperties, testResultPath)
+
     print server_cmd
     print frontend_cmd
 
     os.system(server_cmd)
     os.system(frontend_cmd)
+    os.system(cpy_cmd)
 
 
 def stop_ambry():
@@ -294,6 +299,7 @@ def usage():
     print 'compactionTest.py -w <workerNumber> -j <jobNumber> ' \
           '--hardwareLayoutFilePath <hardwareConfigFile>  ' \
           '--partitionLayoutFilePath <partitionConfigFile> ' \
+          '--serverPropertiesPath <serverPropertiesFile>' \
           '--bigFileNum <bigFileNum> --midFileNum <midFileNum> ' \
           '--smallFileNum <smallFileNum> --tinyFileNum <tinyFileNum> ' \
           '--metricPath <metricPath> --resultPath <resultPath> ' \
@@ -309,6 +315,7 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hw:j:",
                                    ["hardwareLayoutFilePath=",
                                     "partitionLayoutFilePath=",
+                                    "serverPropertiesPath=",
                                     "bigFileNum=", "midFileNum=",
                                     "smallFileNum=", "tinyFileNum=", "metricPath=",
                                     "resultPath=", "partitionSize="])
@@ -325,6 +332,7 @@ def main(argv):
     partitionSizeMB = 0
     hardwareLayoutFile = ""
     partitionLayoutFile = ""
+    serverPropertiesFile = ""
     metricPath = ""
     resultPath = ""
 
@@ -350,6 +358,8 @@ def main(argv):
             hardwareLayoutFile = arg
         elif opt == "--partitionLayoutFilePath":
             partitionLayoutFile = arg
+        elif opt == "--serverPropertiesPath":
+            serverPropertiesFile = arg
         elif opt == "--metricPath":
             metricPath = arg
         elif opt == "--resultPath":
@@ -367,9 +377,17 @@ def main(argv):
     with open(partitionLayoutFile, 'w') as data_file:
         json.dump(data, data_file)
 
+    cmd_line = "rm  {0}/*".format(metricPath)
+    print "Cleaning metric directory: {0}\n".format(cmd_line)
+    os.system(cmd_line)
+
+    cmd_line = "rm  {0}/*".format(resultPath)
+    print "Cleaning result directory: {0}\n".format(cmd_line)
+    os.system(cmd_line)
+
     partitionNum = len(data["partitions"])
 
-    start_up_ambry(hardwareLayoutFile, partitionLayoutFile)
+    start_up_ambry(hardwareLayoutFile, partitionLayoutFile, serverPropertiesFile, resultPath)
 
     print "Starting performance tests...\n"
     time.sleep(5)
@@ -411,7 +429,6 @@ def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum
         fileCount += 1
 
     print("Finish Building BlobMap\n")
-    print blobMap
 
     # Create a master
     master = MasterThread(jobNum, input_q, result_q, blobMap)
