@@ -90,11 +90,18 @@ public class StoreConfig {
   public final boolean storeEnableHardDelete;
 
   /**
-   * The number of scheduler threads the server will use to perform background tasks (store, replication)
+   * threshold on deleted bob size ration for triggering compaction
    */
   @Config("store.compaction.threshold")
   @Default("0.2")
   public final double storeCompactionThreshold;
+
+  /**
+   *threshold on bob hotness for triggering compaction
+   */
+  @Config("store.compaction.hotness.threshold")
+  @Default("5")
+  public final double storeHotnessThreshold;
 
   public StoreConfig(VerifiableProperties verifiableProperties) {
 
@@ -111,6 +118,7 @@ public class StoreConfig {
     storeHardDeleteBytesPerSec = verifiableProperties.getInt("store.hard.delete.bytes.per.sec", 1 * 1024 * 1024);
     storeEnableHardDelete = verifiableProperties.getBoolean("store.enable.hard.delete", false);
     storeCompactionThreshold = verifiableProperties.getDouble("store.compaction.threshold", 0.2);
+    storeHotnessThreshold = verifiableProperties.getDouble("store.compaction.hotness.threshold", 5);
   }
 }
 

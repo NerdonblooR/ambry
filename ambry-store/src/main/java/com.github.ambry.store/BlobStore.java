@@ -62,7 +62,7 @@ public class BlobStore implements Store {
     private long compactThreshold;
     // threshold of get rates within last minute,
     // compaction only triggered when current rate smaller than this threshold
-    private double hotnessThreshold = 5;
+    private double hotnessThreshold;
     private final boolean enableHotnessAwareCompaction = true;
 
 
@@ -79,6 +79,7 @@ public class BlobStore implements Store {
         this.hardDelete = hardDelete;
         this.time = time;
         this.compactThreshold = (long) (config.storeCompactionThreshold * capacityInBytes);
+        this.hotnessThreshold = config.storeHotnessThreshold;
     }
 
     @Override
