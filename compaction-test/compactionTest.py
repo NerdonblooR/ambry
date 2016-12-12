@@ -426,8 +426,7 @@ def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum
 
     reportPerPartition(metricPath, resultPath, master.hotPartition, master.warmPartition, master.coldPartition)
     # reportPerPartition(master.hotPartition, master.warmPartition, master.coldPartitions)
-    print("Finish Test\n")
-
+    print("Finish Test..\n")
 
 if __name__ == '__main__':
     main(sys.argv[1:])
