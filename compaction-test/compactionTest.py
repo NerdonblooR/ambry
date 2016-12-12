@@ -23,8 +23,8 @@ SMALL_RATE = 0.4
 # Shuffle period
 SHUFFLE_TIME = 30
 # Operation rate
-READ_RATE = 0.6
-WRITE_RATE = 0.1
+READ_RATE = 0.5
+WRITE_RATE = 0.25
 DELETE_RATE = 1 - READ_RATE - WRITE_RATE
 # Partition pool hit rate
 HOT_HIT_RATE = 0.7
