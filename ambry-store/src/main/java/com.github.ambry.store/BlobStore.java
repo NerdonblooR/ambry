@@ -65,6 +65,8 @@ public class BlobStore implements Store {
     private double hotnessThreshold;
     private final boolean enableHotnessAwareCompaction = true;
 
+    private String sID;
+
 
     public BlobStore(String storeId, StoreConfig config, Scheduler scheduler, MetricRegistry registry, String dataDir,
                      long capacityInBytes, StoreKeyFactory factory, MessageStoreRecovery recovery, MessageStoreHardDelete hardDelete,
@@ -80,6 +82,7 @@ public class BlobStore implements Store {
         this.time = time;
         this.compactThreshold = (long) (config.storeCompactionThreshold * capacityInBytes);
         this.hotnessThreshold = config.storeHotnessThreshold;
+        this.sID = storeId;
     }
 
     @Override
@@ -407,6 +410,9 @@ public class BlobStore implements Store {
 
     private boolean shouldTriggerCompaction(long deletedBytes) {
         double rate = metrics.getResponse.getOneMinuteRate();
+        if (rate < hotnessThreshold){
+            System.out.println("Partition is Hot, Defer the compaction...");
+        }
         return (!enableHotnessAwareCompaction || (rate < hotnessThreshold)) && (deletedBytes > compactThreshold);
     }
 
@@ -473,7 +479,8 @@ public class BlobStore implements Store {
                     log.setLogEndOffset(writeStartOffset);
                     long elapsedTime = System.currentTimeMillis() - startTime;
                     logger.info("Store : END COMPACTION");
-                    System.out.println("Compaction runtime: " + String.valueOf(elapsedTime) + "ms");
+                    System.out.println("Store " + sID + ": " +
+                            "Compaction runtime: " + String.valueOf(elapsedTime) + "ms");
 
                 } catch (Exception e) {
 
