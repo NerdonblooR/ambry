@@ -153,13 +153,13 @@ class WorkerThread(threading.Thread):
 
     def _getBlob(self, blobId):
         print "Worker: " + str(self.tid) + " do get\n"
-        cmdLine = "curl http://localhost:1174/{0}".format(blobId)
+        cmdLine = "curl -s http://localhost:1174/{0}".format(blobId)
         print cmdLine
         os.system(cmdLine)
 
     def _putBlob(self, fileName):
         print "Worker: " + str(self.tid) + " do put\n"
-        cmdLine = "curl -i -H \"x-ambry-blob-size : " \
+        cmdLine = "curl -s -i -H \"x-ambry-blob-size : " \
                   "`wc -c {0} | xargs | cut -d\" \" -f1`\" " \
                   "-H \"x-ambry-service-id : CUrlUpload\"  -H \"" \
                   "x-ambry-owner-id : `whoami`\" -H \"x-ambry-content-type : image/jpg\" " \
@@ -177,7 +177,7 @@ class WorkerThread(threading.Thread):
 
     def _delete(self, blobId):
         print "Worker: " + str(self.tid) + " do delete\n"
-        cmdLine = "curl -i -X DELETE http://localhost:1174/{0}".format(blobId)
+        cmdLine = "curl -s -i -X DELETE http://localhost:1174/{0}".format(blobId)
         os.system(cmdLine)
 
 
@@ -205,7 +205,8 @@ class MasterThread(threading.Thread):
                 response = self.result_q.get(True, 0.05)
                 partitionId = response[0]
                 blobId = response[1]
-                self.blobMap[partitionId].append(blobId)
+                if partitionId < self.partitionNum:
+                    self.blobMap[partitionId].append(blobId)
                 self._assignJob()
 
             # get response from result_q
@@ -424,11 +425,13 @@ def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum
         # not input_q.empty():
         response = result_q.get()
         partitionId = response[0]
-        blobId = response[1]
-        blobMap[partitionId].append(blobId)
+        if partitionId < partitionNum:
+            blobId = response[1]
+            blobMap[partitionId].append(blobId)
         fileCount += 1
 
     print("Finish Building BlobMap\n")
+    print blobMap
 
     # Create a master
     master = MasterThread(jobNum, input_q, result_q, blobMap)
