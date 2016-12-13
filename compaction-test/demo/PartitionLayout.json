@@ -1,1 +1,42 @@
-{"clusterName": "OneDiskOneReplica", "version": 88, "partitions": [{"replicaCapacityInBytes": 1073741824, "partitionState": "READ_WRITE", "id": 0, "replicas": [{"hostname": "localhost", "port": 6667, "mountPath": "/tmp"}]}, {"replicaCapacityInBytes": 1073741824, "partitionState": "READ_WRITE", "id": 1, "replicas": [{"hostname": "localhost", "port": 6667, "mountPath": "/tmp"}]}, {"replicaCapacityInBytes": 1073741824, "partitionState": "READ_WRITE", "id": 2, "replicas": [{"hostname": "localhost", "port": 6667, "mountPath": "/tmp"}]}]}
+{
+  "clusterName": "OneDiskOneReplica",
+  "version": 88,
+  "partitions": [
+    {
+      "replicaCapacityInBytes": 1073741824,
+      "partitionState": "READ_WRITE",
+      "id": 0,
+      "replicas": [
+        {
+          "hostname": "localhost",
+          "port": 6667,
+          "mountPath": "/localdisk0/h26tan"
+        }
+      ]
+    },
+    {
+      "replicaCapacityInBytes": 1073741824,
+      "partitionState": "READ_WRITE",
+      "id": 1,
+      "replicas": [
+        {
+          "hostname": "localhost",
+          "port": 6667,
+          "mountPath": "/localdisk1/h26tan"
+        }
+      ]
+    },
+    {
+      "replicaCapacityInBytes": 1073741824,
+      "partitionState": "READ_WRITE",
+      "id": 2,
+      "replicas": [
+        {
+          "hostname": "localhost",
+          "port": 6667,
+          "mountPath": "/localdisk2/h26tan"
+        }
+      ]
+    }
+  ]
+}
