@@ -23,8 +23,8 @@ SMALL_RATE = 0.4
 # Shuffle period
 SHUFFLE_TIME = 30
 # Operation rate
-READ_RATE = 0.5
-WRITE_RATE = 0.25
+READ_RATE = 0.7
+WRITE_RATE = 0.15
 DELETE_RATE = 1 - READ_RATE - WRITE_RATE
 # Partition pool hit rate
 HOT_HIT_RATE = 0.7
@@ -80,7 +80,7 @@ def reportPerPartition(metricPath, testResultPath, hotPartitions, warmPartitions
     partitionTypes = ["hot", "warm", "cold"]
     partitionGroups = [hotPartitions, warmPartitions, coldPartitions]
     metricFiles = [getResponseFile, putResponseFile]
-    colToPreserve = [[1, 2, 3, 12], [1, 2, 3, 12]]
+    colToPreserve = [[1, 2, 3, 12, 13], [1, 2, 3, 12, 13]]
 
     for i in range(len(partitionTypes)):
         for partiotnID in partitionGroups[i]:

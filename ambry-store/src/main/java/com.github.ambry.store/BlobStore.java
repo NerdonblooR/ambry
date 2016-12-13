@@ -419,7 +419,8 @@ public class BlobStore implements Store {
             synchronized (lock) {
                 //Create a new Log
                 try {
-                    logger.trace("Store : BEGIN COMPACTION");
+                    logger.info("Store : BEGIN COMPACTION");
+                    long startTime = System.currentTimeMillis();
                     //Copy messages over
                     EnumSet<StoreGetOptions> storeGetOptions = EnumSet.allOf(StoreGetOptions.class);
                     List<BlobReadOptions> readOptions = new ArrayList<BlobReadOptions>();
@@ -447,8 +448,8 @@ public class BlobStore implements Store {
                         long size = entry.getValue().getSize();
                         long offset = entry.getValue().getOffset();
                         long originalOffset = entry.getValue().getOriginalMessageOffset();
-                        System.out.println("WRITING OFFSET " + String.valueOf(writeStartOffset) + " ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
-                                String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
+                        //System.out.println("WRITING OFFSET " + String.valueOf(writeStartOffset) + " ID: " + String.valueOf(id) + " size: " + String.valueOf(size) + " offset: " +
+                        //String.valueOf(offset) + " originalOffset: " + String.valueOf(originalOffset));
 
                         writeStartOffset += readSet.writeTo(i, compactedLog.getFileChannel(), 0, readSet.sizeInBytes(i));
                     }
@@ -470,8 +471,9 @@ public class BlobStore implements Store {
                     tempFile.delete();
                     log.refresh();
                     log.setLogEndOffset(writeStartOffset);
-                    logger.trace("Store : END COMPACTION");
-
+                    long elapsedTime = System.currentTimeMillis() - startTime;
+                    logger.info("Store : END COMPACTION");
+                    System.out.println("Compaction runtime: " + String.valueOf(elapsedTime) + "ms");
 
                 } catch (Exception e) {
 
