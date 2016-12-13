@@ -431,7 +431,6 @@ def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum
         fileCount += 1
 
     print("Finish Building BlobMap\n")
-    print blobMap
 
     # Create a master
     master = MasterThread(jobNum, input_q, result_q, blobMap)
