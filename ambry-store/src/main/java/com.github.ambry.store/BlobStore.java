@@ -409,11 +409,12 @@ public class BlobStore implements Store {
 
 
     private boolean shouldTriggerCompaction(long deletedBytes) {
-        double rate = metrics.getResponse.getOneMinuteRate();
-        if (rate > hotnessThreshold){
+        double readRate = metrics.getResponse.getOneMinuteRate();
+        double writeRate = metrics.putResponse.getOneMinuteRate();
+        if (readRate + writeRate > hotnessThreshold){
             System.out.println("Store " + sID + ": " + "Partition is Hot, Defer the compaction...");
         }
-        return (!enableHotnessAwareCompaction || (rate < hotnessThreshold)) && (deletedBytes > compactThreshold);
+        return (!enableHotnessAwareCompaction || (readRate + writeRate < hotnessThreshold)) && (deletedBytes > compactThreshold);
     }
 
 

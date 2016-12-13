@@ -17,9 +17,9 @@ SMALL_FILE = "smallFile"
 # 100KB filename
 TINY_FILE = "tinyFile"
 # Put rate for each file
-BIG_RATE = 0.01
-MID_RATE = 0.1
-SMALL_RATE = 0.4
+BIG_RATE = 0.5
+MID_RATE = 0.5
+SMALL_RATE = 0
 # Shuffle period
 SHUFFLE_TIME = 30
 # Operation rate
