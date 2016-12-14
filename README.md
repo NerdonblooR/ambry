@@ -24,11 +24,11 @@ $ nohup python highAccessRate.py -s 0 -t 2 -w 5 -j 1000 --hardwareLayoutFilePath
 The script will start Ambry frontend component and backend component, conduct tests and collect performance metrics.
 When script stops, you can check ambry/compaction-test/testResult/1 for collected performance data
 
-ambry/compaction-test/testResult/1 will contain:
+ambry/compaction-test/testResult/1 will contain:     
 -csv files contain performance metrics for each partition  
--server.log contains debug info about compaction code:     
-   check compaction runtime via:    
-   $ cat server.log | grep Compaction       
+-server.log contains debug info about compaction code:        
+   check compaction elapsed time via:        
+   $ cat server.log | grep Compaction             
 -settings for the test: HardwareLayout.json, PartitionLayout.json, config             
 
 
