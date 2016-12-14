@@ -115,6 +115,7 @@ class MasterThread(threading.Thread):
         # blobMap[i] = list blobs stored in partition i
         self.blobMap = list(blobMap)
         self.partitionNum = len(blobMap)
+        self.needShuffle = needShuffle
         self._populatePartitionPool()
 
     def run(self):
