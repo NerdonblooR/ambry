@@ -105,7 +105,7 @@ class WorkerThread(threading.Thread):
 class MasterThread(threading.Thread):
     """Master that assigns job to wokers"""
 
-    def __init__(self, jobNum, input_q, result_q, blobMap):
+    def __init__(self, jobNum, input_q, result_q, blobMap, needShuffle):
         super(MasterThread, self).__init__()
         self.jobNum = jobNum
         self.input_q = input_q
@@ -118,8 +118,14 @@ class MasterThread(threading.Thread):
         self._populatePartitionPool()
 
     def run(self):
+        lastTime = time.time()
         # TODO: double check ending criteria
         while self.jobNum > 0 or not self.input_q.empty():
+            if self.needShuffle == 1:
+                now = time.time()
+                if lastTime - now > 90:
+                    self._shufflePartitionPool()
+                    lastTime = now
             try:
                 # Worker will append response to result queue after retrieving response from put operation
                 # response [partitionId, blobId]
@@ -217,6 +223,20 @@ class MasterThread(threading.Thread):
         self.coldPartition = range(min(hotNum + warmNum, self.partitionNum), self.partitionNum)
 
 
+    """
+    shuffle hot, warm and cold partition pool
+    """
+    def _shufflePartitionPool(self):
+        newCold = self.hotPartition.pop()
+        newWarm = self.coldPartition.pop()
+        newHot = self.warmPartition.pop()
+
+        self.hotPartition.append(newHot)
+        self.warmPartition.append(newWarm)
+        self.coldPartition.append(newCold)
+
+
+
 def usage():
     print 'workerScript.py -w <workerNumber> -j <jobNumber> ' \
           '--bigFileNum <bigFileNum> --midFileNum <midFileNum> ' \
@@ -228,7 +248,7 @@ def main(argv):
         sys.exit(2)
 
     try:
-        opts, args = getopt.getopt(argv, "hw:j:p:",
+        opts, args = getopt.getopt(argv, "hw:j:p:s:",
                                    ["bigFileNum=", "midFileNum=",
                                     "smallFileNum=", "tinyFileNum="])
     except getopt.GetoptError:
@@ -242,7 +262,7 @@ def main(argv):
     smallFileNum = 0
     tinyFileNum = 0
     partitionNum = 0
-
+    needShuffle = 0
 
 
     for opt, arg in opts:
@@ -251,6 +271,8 @@ def main(argv):
             sys.exit()
         elif opt == "-w":
             workerNum = int(arg)
+        elif opt == "-s":
+            needShuffle = int(arg)
         elif opt == "-p":
             partitionNum = int(arg)
         elif opt == "-j":
@@ -264,11 +286,11 @@ def main(argv):
         elif opt == "--tinyFileNum":
             tinyFileNum = int(arg)
 
-    doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum)
+    doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum,needShuffle)
 
 
 
-def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum):
+def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum, needShuffle):
     # populate ambry with random files
     fileNumList = [bigFileNum, midFileNum, smallFileNum, tinyFileNum]
     fileNameList = [BIG_FILE, MID_FILE, SMALL_FILE, TINY_FILE]
@@ -303,7 +325,7 @@ def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum
     print("Finish Building BlobMap\n")
 
     # Create a master
-    master = MasterThread(jobNum, input_q, result_q, blobMap)
+    master = MasterThread(jobNum, input_q, result_q, blobMap, needShuffle)
     master.start()
 
     # Looping till master stops

@@ -186,7 +186,7 @@ class WorkerThread(threading.Thread):
 class MasterThread(threading.Thread):
     """Master that assigns job to wokers"""
 
-    def __init__(self, jobNum, input_q, result_q, blobMap):
+    def __init__(self, jobNum, input_q, result_q, blobMap, needShuffle):
         super(MasterThread, self).__init__()
         self.jobNum = jobNum
         self.input_q = input_q
@@ -200,7 +200,16 @@ class MasterThread(threading.Thread):
 
     def run(self):
         # TODO: double check ending criteria
+        lastTime = time.time()
         while self.jobNum > 0 or not self.input_q.empty():
+            if self.needShuffle == 1:
+                now = time.time()
+                if lastTime - now > 90:
+                    self._shufflePartitionPool()
+                    lastTime = now
+
+
+
             try:
                 # Worker will append response to result queue after retrieving response from put operation
                 # response [partitionId, blobId]
@@ -297,9 +306,22 @@ class MasterThread(threading.Thread):
         self.warmPartition = range(hotNum, min(hotNum + warmNum, self.partitionNum))
         self.coldPartition = range(min(hotNum + warmNum, self.partitionNum), self.partitionNum)
 
+    """
+    shuffle hot, warm and cold partition pool
+    """
+
+    def _shufflePartitionPool(self):
+        newCold = self.hotPartition.pop()
+        newWarm = self.coldPartition.pop()
+        newHot = self.warmPartition.pop()
+
+        self.hotPartition.append(newHot)
+        self.warmPartition.append(newWarm)
+        self.coldPartition.append(newCold)
+
 
 def usage():
-    print 'compactionTest.py -t <extra thread num> -w <workerNumber> -j <jobNumber> ' \
+    print 'compactionTest.py -t <extra thread num> -w <workerNumber> -j <jobNumber> -s <shufflebit> ' \
           '--hardwareLayoutFilePath <hardwareConfigFile>  ' \
           '--partitionLayoutFilePath <partitionConfigFile> ' \
           '--serverPropertiesPath <serverPropertiesFile>' \
@@ -315,7 +337,7 @@ def main(argv):
         sys.exit(2)
 
     try:
-        opts, args = getopt.getopt(argv, "ht:w:j:",
+        opts, args = getopt.getopt(argv, "ht:w:j:s:",
                                    ["hardwareLayoutFilePath=",
                                     "partitionLayoutFilePath=",
                                     "serverPropertiesPath=",
@@ -339,6 +361,7 @@ def main(argv):
     serverPropertiesFile = ""
     metricPath = ""
     resultPath = ""
+    needShuffle = 0
 
     for opt, arg in opts:
         if opt == "-h":
@@ -350,6 +373,8 @@ def main(argv):
             extraThreadNum = int(arg)
         elif opt == "-j":
             jobNum = int(arg)
+        elif opt == "-s":
+            needShuffle = int(arg)
         elif opt == "--bigFileNum":
             bigFileNum = int(arg)
         elif opt == "--midFileNum":
@@ -399,20 +424,23 @@ def main(argv):
     time.sleep(5)
 
     doTest(extraThreadNum, workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum,
-           metricPath, resultPath)
+           metricPath, resultPath, needShuffle)
 
     stop_ambry(resultPath)
 
 
 def doTest(threadNum, workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum, metricPath,
-           resultPath):
+           resultPath, needShuffle):
     # start extra thread for higher access rate
-    cmd_line = "nohup python workerScript.py -w {0} -j {1} -p {6} " \
+    cmd_line = "nohup python workerScript.py -w {0} -j {1} -p {6} -s {7} " \
                "--bigFileNum {2} --midFileNum {3} " \
                "--smallFileNum {4} --tinyFileNum {5} > /dev/null & echo $! >> save_pid.txt".format(workerNum, jobNum,
-                                                                                                 bigFileNum, midFileNum,
-                                                                                                 smallFileNum,
-                                                                                          tinyFileNum, partitionNum)
+                                                                                                   bigFileNum,
+                                                                                                   midFileNum,
+                                                                                                   smallFileNum,
+                                                                                                   tinyFileNum,
+                                                                                                   partitionNum,
+                                                                                                   needShuffle)
 
     for i in range(threadNum):
         os.system(cmd_line)
@@ -453,7 +481,7 @@ def doTest(threadNum, workerNum, jobNum, partitionNum, bigFileNum, midFileNum, s
     print("Finish Building BlobMap\n")
 
     # Create a master
-    master = MasterThread(jobNum, input_q, result_q, blobMap)
+    master = MasterThread(jobNum, input_q, result_q, blobMap, needShuffle)
     master.start()
 
     # Looping till master stops
