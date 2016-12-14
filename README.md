@@ -9,9 +9,9 @@ ambry/ambry-store/src/main/java/com.github.ambry.store/BlobStore.java
 
 ##Build Ambry: 
 
-$ cd ambry
-$ ./gradlew allJar
-$ mkdir logs
+$ cd ambry      
+$ ./gradlew allJar       
+$ mkdir logs     
 
 ##Set up metrics dump directory:
 $ mkdir /tmp/metrics
