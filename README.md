@@ -54,8 +54,7 @@ $ kill -9 \`cat save_pid.txt\`
 
 Note that:
 -Based on provided hardware layout file and partition layout file, Ambry will create 3 partitions
-under /tmp/0, /tmp/1 and /tmp/2.        
--Please don't use large values for -t and -w, script will crash       
+under /tmp/0, /tmp/1 and /tmp/2.            
 
 Please also refer to: https://github.com/linkedin/ambry/wiki/Quick%20Start
 if you want to interact with Ambry without our script
