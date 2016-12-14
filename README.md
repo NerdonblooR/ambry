@@ -4,7 +4,7 @@
 
 $ git clone https://github.com/NerdonblooR/ambry.git
 	
-Most of the code for compaction and compaction scheduling is under:
+Most of the code for compaction and compaction scheduling is in:       
 ambry/ambry-store/src/main/java/com.github.ambry.store/BlobStore.java
 
 ##Build Ambry: 
