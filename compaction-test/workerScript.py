@@ -34,7 +34,6 @@ HOT_RATE = 0.1
 WARM_RATE = 0.2
 
 
-
 def addPadding(s):
     """
     add padding to a base64 encoding
@@ -124,7 +123,8 @@ class MasterThread(threading.Thread):
         while self.jobNum > 0 or not self.input_q.empty():
             if self.needShuffle == 1:
                 now = time.time()
-                if lastTime - now > 90:
+                if now - lastTime > 90:
+                    print "Worker script do shuffle\n"
                     self._shufflePartitionPool()
                     lastTime = now
             try:
@@ -223,10 +223,10 @@ class MasterThread(threading.Thread):
         self.warmPartition = range(hotNum, min(hotNum + warmNum, self.partitionNum))
         self.coldPartition = range(min(hotNum + warmNum, self.partitionNum), self.partitionNum)
 
-
     """
     shuffle hot, warm and cold partition pool
     """
+
     def _shufflePartitionPool(self):
         newCold = self.hotPartition.pop()
         newWarm = self.coldPartition.pop()
@@ -237,11 +237,11 @@ class MasterThread(threading.Thread):
         self.coldPartition.append(newCold)
 
 
-
 def usage():
     print 'workerScript.py -w <workerNumber> -j <jobNumber> ' \
           '--bigFileNum <bigFileNum> --midFileNum <midFileNum> ' \
           '--smallFileNum <smallFileNum> --tinyFileNum <tinyFileNum> '
+
 
 def main(argv):
     if len(argv) == 0:
@@ -265,7 +265,6 @@ def main(argv):
     partitionNum = 0
     needShuffle = 0
 
-
     for opt, arg in opts:
         if opt == "-h":
             usage()
@@ -287,8 +286,7 @@ def main(argv):
         elif opt == "--tinyFileNum":
             tinyFileNum = int(arg)
 
-    doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum,needShuffle)
-
+    doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum, needShuffle)
 
 
 def doTest(workerNum, jobNum, partitionNum, bigFileNum, midFileNum, smallFileNum, tinyFileNum, needShuffle):

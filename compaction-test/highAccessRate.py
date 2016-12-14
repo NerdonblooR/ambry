@@ -205,11 +205,10 @@ class MasterThread(threading.Thread):
         while self.jobNum > 0 or not self.input_q.empty():
             if self.needShuffle == 1:
                 now = time.time()
-                if lastTime - now > 90:
+                if now - lastTime > 90:
+                    print "Master script do shuffle\n"
                     self._shufflePartitionPool()
                     lastTime = now
-
-
 
             try:
                 # Worker will append response to result queue after retrieving response from put operation
