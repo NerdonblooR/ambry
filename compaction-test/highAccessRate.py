@@ -57,7 +57,7 @@ def start_up_ambry(hardwareLayout, partitionLayout, serverProperties, testResult
                    "../logs/frontend.log & echo $! >> save_pid.txt".format(hardwareLayout, partitionLayout)
 
     cpy_cmd = "cp {0} {1} {2} {3}".format(hardwareLayout, partitionLayout, serverProperties, testResultPath)
-    vmstat_cmd = "nohup vmstat 5 1000 > {0}/vmstat.out & echo $! >> save_pid.txt".format(testResultPath)
+
 
     print server_cmd
     print frontend_cmd
@@ -65,7 +65,6 @@ def start_up_ambry(hardwareLayout, partitionLayout, serverProperties, testResult
     os.system(server_cmd)
     os.system(frontend_cmd)
     os.system(cpy_cmd)
-    os.system(vmstat_cmd)
 
 
 def stop_ambry(testResultPath):
