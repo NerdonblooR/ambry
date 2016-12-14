@@ -1,0 +1,3 @@
+host.name=localhost
+store.compaction.threshold=0.2
+store.compaction.hotness.threshold=100
