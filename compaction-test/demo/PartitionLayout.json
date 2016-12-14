@@ -10,7 +10,7 @@
         {
           "hostname": "localhost",
           "port": 6667,
-          "mountPath": "/localdisk0/h26tan"
+          "mountPath": "/tmp"
         }
       ]
     },
@@ -22,7 +22,7 @@
         {
           "hostname": "localhost",
           "port": 6667,
-          "mountPath": "/localdisk1/h26tan"
+          "mountPath": "/tmp"
         }
       ]
     },
@@ -34,7 +34,7 @@
         {
           "hostname": "localhost",
           "port": 6667,
-          "mountPath": "/localdisk2/h26tan"
+          "mountPath": "/tmp"
         }
       ]
     }
