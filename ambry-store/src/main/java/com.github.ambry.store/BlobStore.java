@@ -63,7 +63,7 @@ public class BlobStore implements Store {
     // threshold of get rates within last minute,
     // compaction only triggered when current rate smaller than this threshold
     private double hotnessThreshold;
-    private final boolean enableHotnessAwareCompaction = false;
+    private final boolean enableHotnessAwareCompaction = true;
 
     private String sID;
 
