@@ -18,15 +18,15 @@ $ mkdir /tmp/metrics
 
 ##Run tests with our scripts:
 
-$ cd ambry/compaction-test
-$ nohup python highAccessRate.py -s 0 -t 2 -w 5 -j 1000 --hardwareLayoutFilePath "./demo/HardwareLayout.json"  --partitionLayoutFilePath "./demo/PartitionLayout.json" --serverPropertiesPath "./testConfig/config" --bigFileNum 50 --midFileNum 50 --smallFileNum 0 --tinyFileNum 0 --metricPath "/tmp/metrics" --resultPath "./testResult/1" --partitionSize 1024 > nohup.out &
+$ cd ambry/compaction-test    
+$ nohup python highAccessRate.py -s 0 -t 2 -w 5 -j 1000 --hardwareLayoutFilePath "./demo/HardwareLayout.json"  --partitionLayoutFilePath "./demo/PartitionLayout.json" --serverPropertiesPath "./testConfig/config" --bigFileNum 50 --midFileNum 50 --smallFileNum 0 --tinyFileNum 0 --metricPath "/tmp/metrics" --resultPath "./testResult/1" --partitionSize 1024 > nohup.out &      
 
 The script will start Ambry frontend component and backend component, conduct tests and collect performance metrics.
 When script stops, you can check ambry/compaction-test/testResult/1 for collected performance data
 
 ambry/compaction-test/testResult/1 will contain:
-1. csv files contain performance metrics for each partition
-2. server.log contain debug info about compaction code:
+-csv files contain performance metrics for each partition  
+-server.log contains debug info about compaction code:  
    check compaction runtime via:
    $ cat server.log | grep Compaction
 3  Settings for the test: HardwareLayout.json, PartitionLayout.json, config  
@@ -34,13 +34,12 @@ ambry/compaction-test/testResult/1 will contain:
 
 if the script is running or does not stop normally, you can kill all the background processes created by the script via:
 $ cd ambry/compaction-test
-$ kill -9 `cat save_pid.txt`
+$ kill -9 \`cat save_pid.txt\`
 
 
 ##Explaination for script parameters:
 
--t <extra process number> 
--w <worker threds number per process> 
+           -w <worker threds number per process> 
 -j <number of requests the main process should fetch before it stops> 
 -s <1: enable shuffle partition pools, 0: disable shuffle partition pools> 
 --hardwareLayoutFilePath <hardwareConfigFile>  
