@@ -28,11 +28,11 @@ ambry/compaction-test/testResult/1 will contain:
 -csv files contain performance metrics for each partition  
 -server.log contains debug info about compaction code:     
    check compaction runtime via:    
-   $ cat server.log | grep Compaction     
--Settings for the test: HardwareLayout.json, PartitionLayout.json, config          
+   $ cat server.log | grep Compaction       
+-settings for the test: HardwareLayout.json, PartitionLayout.json, config             
 
 
-if the script is running or does not stop normally, you can kill all the background processes created by the script via:      
+If the script is running or does not stop normally, you can kill all the background processes created by the script via:        
 $ cd ambry/compaction-test    
 $ kill -9 \`cat save_pid.txt\`       
 
