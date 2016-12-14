@@ -19,7 +19,7 @@ $ mkdir /tmp/metrics
 ##Run tests with our scripts:
 
 $ cd ambry/compaction-test    
-$ nohup python highAccessRate.py -s 0 -t 2 -w 5 -j 1000 --hardwareLayoutFilePath "./demo/HardwareLayout.json"  --partitionLayoutFilePath "./demo/PartitionLayout.json" --serverPropertiesPath "./testConfig/config" --bigFileNum 50 --midFileNum 50 --smallFileNum 0 --tinyFileNum 0 --metricPath "/tmp/metrics" --resultPath "./testResult/1" --partitionSize 1024 > nohup.out &      
+$ python highAccessRate.py -s 0 -t 2 -w 5 -j 1000 --hardwareLayoutFilePath "./demo/HardwareLayout.json"  --partitionLayoutFilePath "./demo/PartitionLayout.json" --serverPropertiesPath "./testConfig/config" --bigFileNum 50 --midFileNum 50 --smallFileNum 0 --tinyFileNum 0 --metricPath "/tmp/metrics" --resultPath "./testResult/1" --partitionSize 1024        
 
 The script will start Ambry frontend component and backend component, conduct tests and collect performance metrics.
 When script stops, you can check ambry/compaction-test/testResult/1 for collected performance data
