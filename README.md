@@ -38,19 +38,19 @@ $ kill -9 \`cat save_pid.txt\`
 
 
 ##Explaination for script parameters:     
--w <worker threds number per process>   
--j <number of requests the main process should fetch before it stops>   
--s <1: enable shuffle partition pools, 0: disable shuffle partition pools>     
---hardwareLayoutFilePath <hardwareConfigFile>      
---partitionLayoutFilePath <partitionConfigFile>     
---serverPropertiesPath <file contains the scheduling thresholds>   
---bigFileNum <the number of big file a process need to load into ambry before test phase>   
---midFileNum <the number of medium file a process need to load into ambry before test phase>   
---smallFileNum <the number of small file a process need to load into ambry before test phase>   
---tinyFileNum <the number of tiny file a process need to load into ambry before test phase>  
---metricPath <must set to /tmp/metrics>        
---resultPath <dir to store the test results when test stop>     
---partitionSize <size in MB>     
+-w \<worker threds number per process>   
+-j \<number of requests the main process should fetch before it stops>   
+-s \<1: enable shuffle partition pools, 0: disable shuffle partition pools>     
+--hardwareLayoutFilePath \<hardwareConfigFile>      
+--partitionLayoutFilePath \<partitionConfigFile>     
+--serverPropertiesPath \<file contains the scheduling thresholds>   
+--bigFileNum \<the number of big file a process need to load into ambry before test phase>   
+--midFileNum \<the number of medium file a process need to load into ambry before test phase>   
+--smallFileNum \<the number of small file a process need to load into ambry before test phase>   
+--tinyFileNum \<the number of tiny file a process need to load into ambry before test phase>  
+--metricPath \<must set to /tmp/metrics>        
+--resultPath \<dir to store the test results when test stop>     
+--partitionSize \<size in MB>     
 
 Note that:
 -Based on provided hardware layout file and partition layout file, Ambry will create 3 partitions
